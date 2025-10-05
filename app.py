@@ -1,3 +1,7 @@
+# =============================================
+# 💬 LangChain × Streamlit デモアプリ（完全版）
+# =============================================
+
 # === 0. インポート ===
 from dotenv import load_dotenv
 import os
@@ -5,19 +9,20 @@ import streamlit as st
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain.chains import LLMChain
-import openai  # ← 明示的に追加
+import openai  # 接続テスト用
 
 # === 1. 環境変数設定 ===
-# ローカル実行用: .env ファイルがあれば読み込む
+# ローカル用: .env ファイルを読み込む（あれば）
 load_dotenv()
 
 # Streamlit Cloud用: Secretsから読み込む
 if "OPENAI_API_KEY" not in os.environ or not os.environ["OPENAI_API_KEY"]:
     os.environ["OPENAI_API_KEY"] = st.secrets.get("OPENAI_API_KEY", "")
 
-# === APIキーのデバッグ表示（サイドバー） ===
+# === APIキー確認（サイドバー表示） ===
 st.sidebar.header("🔐 API Key チェック")
 api_key = os.getenv("OPENAI_API_KEY", "")
+
 if api_key and api_key.startswith("sk-"):
     st.sidebar.success("✅ APIキーが認識されました")
     st.sidebar.caption(f"Key prefix: {api_key[:8]}******")
@@ -26,8 +31,21 @@ else:
     st.sidebar.caption("Secrets または .env を確認してください。")
     st.stop()
 
-# --- LangChain / OpenAI が確実にAPIキーを参照できるようにする ---
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# OpenAI SDKにもキーを明示的に渡す
+openai.api_key = api_key
+
+# === 1.5 OpenAI API接続テスト ===
+st.sidebar.markdown("---")
+st.sidebar.subheader("🧩 OpenAI 接続テスト")
+try:
+    client = openai.OpenAI(api_key=api_key)
+    models = client.models.list()
+    st.sidebar.success("✅ OpenAI API 接続成功！")
+    st.sidebar.caption(f"利用可能モデル数: {len(models.data)}")
+except Exception as e:
+    st.sidebar.error(f"❌ API接続エラー: {e}")
+    st.stop()
+
 
 # === 2. LLM応答関数 ===
 def get_llm_response(expert_type, user_input):
@@ -41,7 +59,7 @@ def get_llm_response(expert_type, user_input):
     else:
         system_message = "あなたは親切なAIアシスタントです。質問に丁寧に答えてください。"
 
-    # LLM設定（LangChain + OpenAI）
+    # LangChain設定
     llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0.5)
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_message),
