@@ -3,47 +3,60 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import streamlit as st
+from langchain.chat_models import ChatOpenAI
+from langchain.prompts import ChatPromptTemplate
+from langchain.chains import LLMChain
 
-st.title("サンプルアプリ②: 少し複雑なWebアプリ")
+# === 関数定義 ===
+def get_llm_response(expert_type, user_input):
+    """専門家タイプと入力内容をもとにLLMの回答を返す関数"""
 
-st.write("##### 動作モード1: 文字数カウント")
-st.write("入力フォームにテキストを入力し、「実行」ボタンを押すことで文字数をカウントできます。")
-st.write("##### 動作モード2: BMI値の計算")
-st.write("身長と体重を入力することで、肥満度を表す体型指数のBMI値を算出できます。")
-
-selected_item = st.radio(
-    "動作モードを選択してください。",
-    ["文字数カウント", "BMI値の計算"]
-)
-
-st.divider()
-
-if selected_item == "文字数カウント":
-    input_message = st.text_input(label="文字数のカウント対象となるテキストを入力してください。")
-    text_count = len(input_message)
-
-else:
-    height = st.text_input(label="身長（cm）を入力してください。")
-    weight = st.text_input(label="体重（kg）を入力してください。")
-
-if st.button("実行"):
-    st.divider()
-
-    if selected_item == "文字数カウント":
-        if input_message:
-            st.write(f"文字数: **{text_count}**")
-
-        else:
-            st.error("カウント対象となるテキストを入力してから「実行」ボタンを押してください。")
-
+    # システムメッセージを選択
+    if expert_type == "英語教師":
+        system_message = "あなたは優秀な英語教師です。英語学習者にわかりやすく説明してください。"
+    elif expert_type == "栄養士":
+        system_message = "あなたは専門知識豊富な栄養士です。健康や食事に関する質問に丁寧に答えてください。"
     else:
-        if height and weight:
-            try:
-                bmi = round(int(weight) / ((int(height)/100) ** 2), 1)
-                st.write(f"BMI値: {bmi}")
+        system_message = "あなたは親切なAIアシスタントです。質問に丁寧に答えてください。"
 
-            except ValueError as e:
-                st.error("身長と体重は数値で入力してください。")
+    # LangChainの設定
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.5)
 
-        else:
-            st.error("身長と体重をどちらも入力してください。")
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", system_message),
+        ("human", "{question}")
+    ])
+
+    chain = LLMChain(llm=llm, prompt=prompt)
+    result = chain.run({"question": user_input})
+    return result
+
+
+# === Streamlit UI ===
+st.title("💬 LangChain × Streamlit デモアプリ")
+st.write("""
+### 🧭 アプリ概要
+このアプリでは、選択した専門家（英語教師 or 栄養士）としてAIが回答します。
+テキストを入力して「送信」ボタンを押すと、AIの回答が表示されます。
+
+### 🪄 操作手順
+1. 専門家タイプを選択してください  
+2. テキストを入力してください  
+3. 「送信」ボタンをクリックするとAIが回答します
+""")
+
+# 専門家選択
+expert_type = st.radio("AIの専門家タイプを選んでください：", ["英語教師", "栄養士"])
+
+# 入力フォーム
+user_input = st.text_area("質問や相談内容を入力してください：")
+
+# 実行ボタン
+if st.button("送信"):
+    if user_input:
+        with st.spinner("AIが考えています..."):
+            answer = get_llm_response(expert_type, user_input)
+        st.success("AIの回答：")
+        st.write(answer)
+    else:
+        st.warning("テキストを入力してください。")
