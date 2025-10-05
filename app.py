@@ -5,25 +5,29 @@ import streamlit as st
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain.chains import LLMChain
+import openai  # ← 明示的に追加
 
 # === 1. 環境変数設定 ===
-# ローカル用: .env ファイルがあれば読み込む
+# ローカル実行用: .env ファイルがあれば読み込む
 load_dotenv()
 
-# Streamlit Cloud 用: Secretsから読み込む
+# Streamlit Cloud用: Secretsから読み込む
 if "OPENAI_API_KEY" not in os.environ or not os.environ["OPENAI_API_KEY"]:
     os.environ["OPENAI_API_KEY"] = st.secrets.get("OPENAI_API_KEY", "")
 
-# === デバッグ表示（サイドバー） ===
+# === APIキーのデバッグ表示（サイドバー） ===
 st.sidebar.header("🔐 API Key チェック")
 api_key = os.getenv("OPENAI_API_KEY", "")
-if api_key.startswith("sk-"):
+if api_key and api_key.startswith("sk-"):
     st.sidebar.success("✅ APIキーが認識されました")
     st.sidebar.caption(f"Key prefix: {api_key[:8]}******")
 else:
     st.sidebar.error("❌ OPENAI_API_KEY が設定されていません")
     st.sidebar.caption("Secrets または .env を確認してください。")
-    st.stop()  # APIキーがない場合は実行を停止
+    st.stop()
+
+# --- LangChain / OpenAI が確実にAPIキーを参照できるようにする ---
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # === 2. LLM応答関数 ===
 def get_llm_response(expert_type, user_input):
@@ -63,7 +67,7 @@ st.write("""
 # 専門家タイプ選択
 expert_type = st.radio("AIの専門家タイプを選んでください：", ["英語教師", "栄養士"])
 
-# 質問入力
+# 質問入力欄
 user_input = st.text_area("質問や相談内容を入力してください：")
 
 # 実行ボタン
