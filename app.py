@@ -38,7 +38,7 @@ def get_llm_response(expert_type, user_input):
         system_message = "あなたは親切なAIアシスタントです。質問に丁寧に答えてください。"
 
     # LLM設定（LangChain + OpenAI）
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.5)
+    llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0.5)
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_message),
         ("human", "{question}")
